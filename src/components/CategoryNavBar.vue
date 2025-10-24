@@ -17,7 +17,7 @@ const categories = computed(() => Array.isArray(data?.value) ? data.value : [])
         <li v-for="c in categories" :key="c.slug" class="font-poppins rounded-md">
           <RouterLink :to="`/category/${c.slug}`" v-slot="{ isActive }">
             <span
-              class="block px-4 py-3 text-center rounded-md transition"
+              class="block px-4 py-3 text-center rounded-md transition h-14 flex items-center justify-center"
               :class="isActive ? 'bg-white/30 font-semibold' : 'bg-white/10 hover:bg-white/20 h-14 items-center flex justify-center'"
             >
               {{ c.title }}
