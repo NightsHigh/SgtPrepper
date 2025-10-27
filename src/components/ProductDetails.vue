@@ -17,6 +17,7 @@ const products = computed(() =>
   Array.isArray(productData.value) ? productData.value : [productData.value]
 )
 
+
 const { data: reviewsData, loading: reviewsLoading, error: reviewsError } = useFetch(
   'http://localhost:4000/api/reviews',
   { initial: [] }
@@ -45,7 +46,10 @@ const stock = (p) => (p.stock > 0 ? 'På lager' : 'Udsolgt')
     <p v-if="loading || reviewsLoading" class="text-gray-300">Indlæser…</p>
     <p v-else-if="error || reviewsError" class="text-red-400">Der opstod en fejl.</p>
 
-    <ul v-else class="flex flex-col items-center gap-8 p-4">
+    <ul
+      v-else
+      class="flex flex-col items-center gap-8 p-4"
+    >
       <li
         v-for="p in products"
         :key="p.slug ?? p.id"
