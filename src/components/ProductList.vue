@@ -1,75 +1,140 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { watch, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useFetch } from '@/composables/useFetch'
 
-const route = useRoute()
-const slug = computed(() => route.params.slug || null)
+const props = defineProps({
+  selectedCategoryId: { type: [Number, String], default: null },
+  isLoggedIn: { type: Boolean, default: false },
+  addToCart: { type: Function, default: () => {} },
+  openLogin: { type: Function, default: null }, // open login modal
+})
 
-const endpoint = computed(() =>
-  slug.value
-    ? `http://localhost:4000/api/products/${slug.value}`
-    : 'http://localhost:4000/api/products/Mad-og-langtidsopbevaring'
-)
+const API_PORT = import.meta.env.VITE_API_PORT || 4000
+const API = `http://localhost:${API_PORT}/api`
 
-const { data: productData, loading, error } = useFetch(() => endpoint.value, { initial: [] })
-const products = computed(() =>
-  Array.isArray(productData.value) ? productData.value : [productData.value]
-)
+function listUrl() {
+  return props.selectedCategoryId
+    ? `${API}/products/${encodeURIComponent(props.selectedCategoryId)}`
+    : `${API}/products`
+}
 
-const { data: reviewsData, loading: reviewsLoading, error: reviewsError } = useFetch(
-  'http://localhost:4000/api/reviews',
-  { initial: [] }
-)
+// Load products
+const { data, loading, error, run } = useFetch(listUrl(), { initial: [], immediate: true })
+watch(() => props.selectedCategoryId, () => run(listUrl()))
 
-const BASE = 'http://localhost:4000'
-const imgSrc = (p) => {
-  const url = p.imageUrl ?? p.image
-  if (!url) return ''
+const products = computed(() => (Array.isArray(data.value) ? data.value : []))
+
+function imgSrc(p) {
+  const url = p?.imageUrl || p?.thumbnail || ''
+  if (!url) return '/placeholder.png'
   if (/^https?:\/\//i.test(url)) return url
-  return `${BASE.replace(/\/$/, '')}/${String(url).replace(/^\//, '')}`
+  return `http://localhost:${API_PORT}/${url.replace(/^\//, '')}`
 }
 
-const fmtPrice = (v) => {
-  const n = Number(v)
-  return Number.isFinite(n) ? `${n.toLocaleString('da-DK')},00` : v
+function resolveLocalId(p) {
+  // try common fields first
+  const candidates = [p?.id, p?.productId, p?.product_id, p?.product?.id, p?.product?.productId, p?.variant?.productId]
+  for (const c of candidates) {
+    const n = Number(c)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return null
 }
 
-const stock = (p) => (p.stock > 0 ? 'På lager' : 'Udsolgt')
+// Fallback: fetch by slug to get the product with a real numeric id
+async function fetchIdBySlug(p) {
+  const slug = p?.slug
+  if (!slug) return null
+  // Backend product controller resolves by slug only; category is ignored, so send selected or "all"
+  const cat = props.selectedCategoryId ?? 'all'
+  try {
+    const res = await fetch(`${API}/products/${encodeURIComponent(cat)}/${encodeURIComponent(slug)}`)
+    if (!res.ok) return null
+    const full = await res.json()
+    const n = Number(full?.id)
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+async function handleAddToCart(p) {
+  if (!props.isLoggedIn) {
+    props.openLogin && props.openLogin()
+    return
+  }
+
+  // 1) use any id that is already present
+  let productId = resolveLocalId(p)
+
+  // 2) fallback: fetch by slug to obtain id
+  if (!productId) {
+    productId = await fetchIdBySlug(p)
+  }
+
+  if (!productId) {
+    console.error('Product shape without usable id:', p)
+    alert('Kunne ikke finde produktets ID')
+    return
+  }
+
+  try {
+    await props.addToCart(productId, 1)
+  } catch (err) {
+    console.error('Add to cart failed:', err)
+    alert('Kunne ikke tilføje produktet til kurven.')
+  }
+}
 </script>
 
 <template>
-  <article class="py-6">
-    <h4 class="text-xl font-semibold mb-4 text-white">Seneste nyt</h4>
+  <section class="mx-auto max-w-7xl px-4 py-6">
+    <p v-if="loading">Indlæser…</p>
+    <p v-else-if="error" class="text-red-600">{{ error }}</p>
 
-    <p v-if="loading || reviewsLoading" class="text-gray-300">Indlæser…</p>
-    <p v-else-if="error || reviewsError" class="text-red-400">Der opstod en fejl.</p>
-
-    <ul v-else class="flex flex-col items-center gap-8 p-4">
-      <li
-        v-for="p in products"
-        :key="p.slug ?? p.id"
-        class="font-poppins border rounded-md p-6 bg-gray-600 text-white w-6/8 flex flex-col gap-2 hover:bg-gray-700 transition"
-      >
+    <ul v-else class="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <li v-for="p in products" :key="p.slug ?? p.id ?? p.productId" class="group">
         <RouterLink
-          class="flex items-center gap-2 w-full"
-          :to="{ name: 'product', params: { category: slug || 'Mad-og-langtidsopbevaring', slug: p.slug } }"
+          :to="{ name: 'product', params: { slug: p.slug ?? String(p.id ?? p.productId ?? '') } }"
+          class="block rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 hover:shadow-md hover:ring-slate-300 transition overflow-hidden"
         >
-          <img
-            :src="imgSrc(p)"
-            :alt="`Image of ${p.name}`"
-            class="w-40 h-32 object-contain bg-white/5 rounded"
-          />
-          <div class="flex flex-col gap-1">
-            <strong class="text-lg">{{ p.name }}</strong>
-            <p class="opacity-90">{{ p.teaser }}</p>
+          <div class="bg-slate-100">
+            <img
+              :src="imgSrc(p)"
+              :alt="p.name || p.title || 'Produkt'"
+              class="h-44 w-full object-cover"
+              loading="lazy"
+            />
           </div>
-          <div class="ml-auto flex flex-col items-end gap-2">
-            <span :class="p.stock > 0 ? 'text-green-400' : 'text-red-400'">{{ stock(p) }}</span>
-            <span class="opacity-90">{{ fmtPrice(p.price) }} kr</span>
+          <div class="p-4">
+            <p class="font-semibold truncate">{{ p.name || p.title }}</p>
+            <p class="text-sm text-slate-600">{{ p.teaser || p.brand?.title || '' }}</p>
           </div>
         </RouterLink>
+
+        <div class="p-4 pt-2">
+          <button
+            v-if="props.isLoggedIn"
+            class="w-full rounded-lg bg-slate-800 text-white py-2 hover:opacity-90"
+            @click="handleAddToCart(p)"
+          >
+            Læg i kurv
+          </button>
+
+          <button
+            v-else
+            class="w-full rounded-lg bg-slate-200 text-slate-700 py-2 hover:bg-slate-300"
+            @click="props.openLogin && props.openLogin()"
+          >
+            Log ind for at købe
+          </button>
+        </div>
       </li>
     </ul>
-  </article>
+
+    <p v-if="!loading && !error && products.length === 0" class="mt-4 text-slate-600">
+      Ingen produkter.
+    </p>
+  </section>
 </template>

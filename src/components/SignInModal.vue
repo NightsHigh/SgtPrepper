@@ -1,71 +1,85 @@
-<template>
-  <div
-    v-if="open"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
-    @click.self="$emit('close')"
-  >
-    <div class="bg-white rounded-xl shadow-xl p-6 w-96 relative">
-      <h2 class="text-xl font-semibold mb-4 text-gray-900">Log ind</h2>
+<script setup>
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
-      <form @submit.prevent="onSubmit" class="flex flex-col gap-4">
+const props = defineProps({
+  open: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false },
+  error: { type: String, default: '' },
+})
+const emit = defineEmits(['close', 'submit'])
+
+const email = ref('')
+const password = ref('')
+
+function onSubmit(e) {
+  e?.preventDefault?.()
+  emit('submit', {
+    email: email.value.trim(),
+    password: password.value,
+  })
+}
+
+function onOverlay(e) {
+  if (e.target === e.currentTarget) emit('close')
+}
+function onEsc(e) {
+  if (e.key === 'Escape') emit('close')
+}
+watch(() => props.open, (v) => {
+  if (v) {
+    // reset error state only; keep typed values
+  }
+})
+onMounted(() => window.addEventListener('keydown', onEsc))
+onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
+</script>
+
+<template>
+  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center" @click="onOverlay">
+    <div class="absolute inset-0 bg-black/40" />
+    <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+      <h2 class="text-xl font-semibold mb-4">Log ind</h2>
+
+      <form @submit="onSubmit" class="space-y-4">
         <div>
-          <label for="email" class="block text-sm mb-1">Email</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
           <input
-            id="email"
             v-model="email"
             type="email"
             required
-            class="w-full border rounded p-2 focus:outline-none focus:ring"
+            autocomplete="email"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            placeholder="you@example.com"
           />
         </div>
 
         <div>
-          <label for="password" class="block text-sm mb-1">Adgangskode</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Adgangskode</label>
           <input
-            id="password"
             v-model="password"
             type="password"
             required
-            class="w-full border rounded p-2 focus:outline-none focus:ring"
+            autocomplete="current-password"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            placeholder="••••••••"
           />
         </div>
 
-        <div class="flex justify-between mt-2">
-          <button
-            type="button"
-            @click="$emit('close')"
-            class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-          >
-            Opret Profil
+        <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200" @click="$emit('close')">
+            Annullér
           </button>
           <button
             type="submit"
-            class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            class="px-4 py-2 rounded-lg bg-[#334156] text-white hover:opacity-90 disabled:opacity-60"
+            :disabled="loading"
           >
-            Log ind
+            {{ loading ? 'Logger ind…' : 'Log ind' }}
           </button>
         </div>
       </form>
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-
-const props = defineProps({ open: { type: Boolean, default: false } })
-const emit = defineEmits(['close', 'submit'])
-
-const email = ref('')
-const password = ref('')
-
-function onSubmit() {
-  emit('submit', { email: email.value, password: password.value })
-}
-
-function onKey(e) {
-  if (e.key === 'Escape' && props.open) emit('close')
-}
-onMounted(() => window.addEventListener('keydown', onKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
-</script>

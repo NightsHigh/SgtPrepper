@@ -1,129 +1,122 @@
 <script>
 import Header from '@/components/Header.vue'
 import Footer from '@/components/Footer.vue'
-import ProductList from '@/components/ProductList.vue'
 import CategoryNavBar from '@/components/CategoryNavBar.vue'
-import Hero from '@/components/Hero.vue'
+import ProductList from '@/components/ProductList.vue'
 import SignInModal from '@/components/SignInModal.vue'
+import CartDrawer from '@/components/CartDrawer.vue'              // ✅ new
+import { useCart } from '@/composables/useCart'
+import { useAuth } from '@/composables/useAuth'                           // ✅ new
 
 export default {
-  components: { Header, Footer, ProductList, CategoryNavBar, Hero, SignInModal },
+  components: { Header, Footer, CategoryNavBar, ProductList, SignInModal, CartDrawer },
+  setup() {
+    const cart = useCart()
+    const { state, setAuth, logout } = useAuth()
+    return { cart, authState: state, setAuth, logout }
+  },
   data() {
     return {
       IsLoggedIn: false,
-      ShowSignIn: false,
       user: null,
+      ShowSignIn: false,
+      isAuthLoading: false,
+      authError: '',
+      SelectedCategoryId: null,
+      ShowCart: false,
     }
   },
-  computed: {
-    fullName() {
-      return this.user ? `${this.user.firstname} ${this.user.lastname}` : ''
+  watch: {
+    IsLoggedIn(next) {
+      if (next) this.cart.fetchCart()
+      else this.cart.items = []
+    }
+  },
+  mounted() {
+    // bootstrap auth from localStorage
+    this.IsLoggedIn = !!this.authState.accessToken
+    this.user = this.authState.user
+    if (this.IsLoggedIn) this.cart.fetchCart()
+  },
+  methods: {
+    OnSelectCategory(slug) {
+      this.SelectedCategoryId = slug
+      if (this.$route?.name !== 'home') this.$router?.push?.({ name: 'home' })
+    },
+    ToggleLogin() {
+      if (this.IsLoggedIn) {
+        this.logout()
+        this.IsLoggedIn = false
+        this.user = null
+        this.cart.items = []
+      } else {
+        this.OpenSignIn()
+      }
+    },
+    OpenSignIn() { this.ShowSignIn = true },
+    CloseSignIn() { this.ShowSignIn = false },
+    async HandleLoginSubmit({ email, password }) {
+      this.isAuthLoading = true
+      this.authError = ''
+      const API_PORT = import.meta.env.VITE_API_PORT || 4000
+      const API = `http://localhost:${API_PORT}/api`
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: email, password })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.message || 'Login failed')
+
+        this.setAuth({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user })
+        this.IsLoggedIn = true
+        this.user = data.user
+        this.ShowSignIn = false
+        await this.cart.fetchCart()
+      } catch (e) {
+        this.authError = e.message || String(e)
+      } finally {
+        this.isAuthLoading = false
+      }
+    },
+    async AddToCart(productId, qty = 1) {
+      if (!this.IsLoggedIn) { this.OpenSignIn(); return }
+      await this.cart.addToCart(productId, qty)
     },
   },
-  created() {
-    const saved = localStorage.getItem('user')
-    if (saved) {
-      this.user = JSON.parse(saved)
-      this.IsLoggedIn = true
-    }
-  },
-methods: {
-  OpenSignIn() {
-    this.ShowSignIn = true
-  },
-  CloseSignIn() {
-    this.ShowSignIn = false
-  },
-
-  async HandleLoginSubmit({ email, password }) {
-    try {
-      this.IsLoggedIn = false
-      this.user = null
-      localStorage.removeItem('user')
-
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password }),
-      })
-
-      if (loginRes.ok) {
-        const data = await loginRes.json()
-        if (!data?.user) throw new Error('Missing user in response')
-        this.user = data.user
-        this.IsLoggedIn = true
-        localStorage.setItem('user', JSON.stringify(this.user))
-        localStorage.setItem('accessToken', data.accessToken || '')
-        localStorage.setItem('refreshToken', data.refreshToken || '')
-        this.ShowSignIn = false
-        return
-      }
-
-      if (loginRes.status === 401) {
-        const usersRes = await fetch('/api/users', { headers: { 'Content-Type': 'application/json' } })
-        if (!usersRes.ok) throw new Error('Could not fetch users')
-
-        const list = await usersRes.json()
-        const match = Array.isArray(list)
-          ? list.find(u => (u.email || '').toLowerCase() === email.toLowerCase())
-          : null
-
-        if (!match) {
-          throw new Error('Ingen bruger fundet for den e-mail')
-        }
-
-        this.user = { id: match.id, firstname: match.firstname, lastname: match.lastname, email: match.email }
-        this.IsLoggedIn = true
-        localStorage.setItem('user', JSON.stringify(this.user))
-        this.ShowSignIn = false
-        return
-      }
-
-      let msg = 'Login failed'
-      try {
-        const err = await loginRes.json()
-        if (err?.message) msg = err.message
-      } catch {}
-      throw new Error(msg)
-    } catch (e) {
-      console.error(e)
-      alert(e.message || 'Kunne ikke logge ind eller hente brugerdata')
-    }
-  },
-
-  HandleLogout() {
-    this.IsLoggedIn = false
-    this.user = null
-    localStorage.removeItem('user')
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-  },
-}
-
-
 }
 </script>
-
 
 <template>
   <div>
     <Header
       :isLoggedIn="IsLoggedIn"
       :user="user"
-      :fullName="fullName"
-      @toggle-login="OpenSignIn"
-      @logout="HandleLogout"
+      :cartCount="cart.count?.value ?? 0"
+      @toggle-login="ToggleLogin"
+      @open-cart="ShowCart = true"
     />
 
-    <CategoryNavBar />
-    <router-view />
+    <CategoryNavBar @select-category="OnSelectCategory" />
+
+    <router-view
+      :selectedCategoryId="SelectedCategoryId"
+      :isLoggedIn="IsLoggedIn"
+      :addToCart="AddToCart"
+      :openLogin="OpenSignIn"
+    />
+
     <Footer />
 
     <SignInModal
       :open="ShowSignIn"
+      :loading="isAuthLoading"
+      :error="authError"
       @close="CloseSignIn"
       @submit="HandleLoginSubmit"
     />
+
+    <CartDrawer :open="ShowCart" @close="ShowCart = false" @checkout="() => {}" />
   </div>
 </template>
-
