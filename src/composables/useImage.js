@@ -1,10 +1,14 @@
-export function buildImageUrl(url, apiPort = import.meta.env.VITE_API_PORT || 4000) {
+export function buildImageUrl(url) {
   if (!url) return ''
   if (/^https?:\/\//i.test(url)) return url
-  return `http://localhost:${apiPort}/${String(url).replace(/^\//, '')}`
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+  const staticBase = apiBase.replace(/\/api\/?$/, '')
+
+  return `${staticBase}/${String(url).replace(/^\//, '')}`
 }
 
-export function resolveProductImage(input, apiPort = import.meta.env.VITE_API_PORT || 4000) {
+export function resolveProductImage(input) {
   const p = input?.product ?? input?.Product ?? input ?? {}
 
   const direct =
@@ -13,31 +17,20 @@ export function resolveProductImage(input, apiPort = import.meta.env.VITE_API_PO
     p.image || p.img ||
     p.imagePath || p.image_path || p.imagepath ||
     p.imageurl || p.image_uri || p.imageHref || p.photo || p.picture
-  if (direct) return buildImageUrl(direct, apiPort)
+  if (direct) return buildImageUrl(direct)
 
-  const arrays = [p.images, p.media, p.photos, p.pictures, p.gallery]
-  for (const arr of arrays) {
-    if (Array.isArray(arr) && arr.length) {
-      const first = arr[0]
-      const fromArray =
-        (typeof first === 'string' && first) ||
-        first?.url || first?.src || first?.path || first?.href
-      if (fromArray) return buildImageUrl(fromArray, apiPort)
+  const nested = p.assets || p.media || p.images || p.photos || null
+  if (Array.isArray(nested) && nested.length > 0) {
+    const first = nested[0]
+    if (typeof first === 'string') return buildImageUrl(first)
+    if (first && typeof first === 'object') {
+      const deep = findImageUrlDeep(first)
+      if (deep) return buildImageUrl(deep)
     }
   }
 
-  const nested =
-    (p.image && (p.image.url || p.image.src || p.image.path)) ||
-    (p.thumbnail && (p.thumbnail.url || p.thumbnail.src || p.thumbnail.path)) ||
-    (p.picture && (p.picture.url || p.picture.src || p.picture.path))
-  if (nested) return buildImageUrl(nested, apiPort)
-
-  const onItem =
-    input?.imageUrl || input?.image_url || input?.image || input?.img || input?.thumbnail
-  if (onItem) return buildImageUrl(onItem, apiPort)
-
-  const deep = findImageUrlDeep(p) || findImageUrlDeep(input)
-  if (deep) return buildImageUrl(deep, apiPort)
+  const deep = findImageUrlDeep(p)
+  if (deep) return buildImageUrl(deep)
 
   return ''
 }

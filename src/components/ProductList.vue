@@ -11,13 +11,13 @@ const props = defineProps({
   openLogin: { type: Function, default: null },
 })
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-const API = `http://localhost:${API_PORT}/api`
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const STATIC_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
 
 function listUrl() {
   return props.selectedCategoryId
-    ? `${API}/products/${encodeURIComponent(props.selectedCategoryId)}`
-    : `${API}/products`
+    ? `${API_BASE_URL}/products/${encodeURIComponent(props.selectedCategoryId)}`
+    : `${API_BASE_URL}/products`
 }
 
 const {
@@ -35,7 +35,7 @@ watch(
   () => run(listUrl()),
 )
 
-const { data: reviewsData } = useFetch(`${API}/reviews`, {
+const { data: reviewsData } = useFetch(`${API_BASE_URL}/reviews`, {
   initial: [],
   immediate: true,
 })
@@ -45,7 +45,7 @@ const categoriesLoaded = ref(false)
 
 async function loadCategories() {
   try {
-    const res = await fetch(`${API}/categories`)
+    const res = await fetch(`${API_BASE_URL}/categories`)
     if (!res.ok) return
     const cats = await res.json()
     categorySlugs.value = Array.isArray(cats)
@@ -76,7 +76,7 @@ async function resolveProductIdFromSlug(slug) {
 
   for (const catSlug of categorySlugs.value) {
     try {
-      const url = `${API}/products/${encodeURIComponent(
+      const url = `${API_BASE_URL}/products/${encodeURIComponent(
         catSlug,
       )}/${encodeURIComponent(slug)}`
       const res = await fetch(url)
@@ -102,7 +102,7 @@ function buildImageUrl(url) {
   if (!url) return '/placeholder.png'
   const s = String(url)
   if (/^https?:\/\//i.test(s)) return s
-  return `http://localhost:${API_PORT}/${s.replace(/^\//, '')}`
+  return `${STATIC_BASE_URL}/${s.replace(/^\//, '')}`
 }
 
 function imgSrc(p) {
@@ -110,7 +110,7 @@ function imgSrc(p) {
   return buildImageUrl(url)
 }
 
-function formatNumber(n) {
+function fmt(n) {
   const x = Number(String(n ?? '').replace(',', '.'))
   if (!Number.isFinite(x)) return ''
   return new Intl.NumberFormat('da-DK', {
@@ -253,7 +253,7 @@ async function handleAddToCart(p) {
             </p>
 
             <p v-if="p.price != null" class="mt-1 font-medium">
-              {{ formatNumber(p.price) }} kr
+              {{ fmt(p.price) }} kr
               <span class="text-xs text-slate-600">inkl. moms</span>
             </p>
 

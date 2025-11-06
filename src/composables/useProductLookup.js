@@ -3,8 +3,7 @@ import { useFetch } from '@/composables/useFetch'
 const cacheById = new Map()
 const cacheBySlug = new Map()
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-const API = `http://localhost:${API_PORT}/api`
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
 
 function slugify(s) {
   return String(s || '')
@@ -26,7 +25,7 @@ export async function getProduct({ id, slug, categorySlug } = {}) {
   if (slug && cacheBySlug.has(slug)) return cacheBySlug.get(slug)
 
   if (id) {
-    const prod = await fetchJson(`${API}/products/${encodeURIComponent(id)}`)
+    const prod = await fetchJson(`${API_BASE_URL}/products/${encodeURIComponent(id)}`)
     if (prod) {
       cacheById.set(String(prod.id), prod)
       if (prod.slug) cacheBySlug.set(prod.slug, prod)

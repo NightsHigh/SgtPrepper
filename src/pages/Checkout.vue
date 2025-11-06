@@ -5,7 +5,6 @@ import { useCart } from '@/composables/useCart'
 
 const router = useRouter()
 const { items, subtotal, clearCart } = useCart()
-
 const form = ref({
   fullName: '',
   email: '',
@@ -78,6 +77,7 @@ async function handleSubmit() {
   await clearCart()
   router.push({ name: 'success' })
 }
+
 </script>
 
 <template>

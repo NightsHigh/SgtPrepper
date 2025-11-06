@@ -2,8 +2,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { resolveProductImage, buildImageUrl } from '@/composables/useImage'
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-const API_BASE_URL = `http://localhost:${API_PORT}/api`
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const STATIC_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
 
 function slugify(str) {
   return String(str || '')
@@ -13,29 +13,9 @@ function slugify(str) {
     .replace(/\s+/g, '-')
 }
 
-async function checkPlaceholder() {
-  const placeholderUrls = [
-    `http://localhost:${API_PORT}/static/placeholder.png`,
-    `http://localhost:${API_PORT}/images/placeholder.png`,
-    `http://localhost:${API_PORT}/placeholder.png`,
-  ]
-
-  for (const url of placeholderUrls) {
-    try {
-      const response = await fetch(url, { method: 'HEAD' })
-      if (response.ok) {
-        return url
-      }
-    } catch (e) {
-    }
-  }
-
-  return null
-}
-
-const items = ref([]) // list of cart items shared across the app
-const isLoading = ref(false) // true while the cart is being loaded from the API
-const error = ref('') // holds the latest error message (if any)
+const items = ref([])
+const isLoading = ref(false)
+const error = ref('')
 
 export function useCart() {
   const { authHeader } = useAuth()
@@ -123,10 +103,10 @@ export function useCart() {
 
         const merged = full ? { ...p, ...full } : { ...p }
 
-        let resolvedUrl = resolveProductImage(merged, API_PORT)
+        let resolvedUrl = resolveProductImage(merged)
 
         if (!resolvedUrl) {
-          resolvedUrl = buildImageUrl('/placeholder.png', API_PORT)
+          resolvedUrl = buildImageUrl('/placeholder.png')
         }
 
         const productWithImage = { ...merged, _resolvedImage: resolvedUrl }
@@ -137,7 +117,7 @@ export function useCart() {
           _resolvedImage: resolvedUrl,
         })
       } catch (e) {
-        const fallback = buildImageUrl('/placeholder.png', API_PORT)
+        const fallback = buildImageUrl('/placeholder.png')
         out.push({
           ...it,
           _resolvedImage: fallback,
@@ -185,21 +165,21 @@ export function useCart() {
   }
 
 
-
   async function clearCart() {
-    error.value = ''
-    const currentItems = Array.isArray(items.value) ? [...items.value] : []
+  error.value = ''
+  const currentItems = Array.isArray(items.value) ? [...items.value] : []
 
-    for (const item of currentItems) {
-      try {
-        if (item?.id != null) {
-          await removeFromCart(item.id)
-        }
-      } catch (e) {
-        error.value = e?.message || String(e)
+  for (const item of currentItems) {
+    try {
+      if (item?.id != null) {
+        await removeFromCart(item.id)
       }
+    } catch (e) {
+      error.value = e?.message || String(e)
     }
   }
+}
+
 
   const subtotal = computed(() =>
     items.value.reduce(
@@ -207,10 +187,6 @@ export function useCart() {
       0,
     ),
   )
-
-  onMounted(async () => {
-    await checkPlaceholder()
-  })
 
   return {
     items,

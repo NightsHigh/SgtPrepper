@@ -1,15 +1,15 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useAuth } from '@/composables/useAuth'   // or '@/stores/auth'
 import { useCart } from '@/composables/useCart'
 
 const route = useRoute()
 const { state: authState } = useAuth()
 const cart = useCart()
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-const API = `http://localhost:${API_PORT}/api`
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const STATIC_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
 
 const product = ref(null)
 const loading = ref(true)
@@ -19,7 +19,7 @@ const slug = computed(() => String(route.params.slug || ''))
 function buildImageUrl(url) {
   if (!url) return '/placeholder.png'
   if (/^https?:\/\//i.test(url)) return url
-  return `http://localhost:${API_PORT}/${String(url).replace(/^\//,'')}`
+  return `${STATIC_BASE_URL}/${String(url).replace(/^\//,'')}`
 }
 function fmt(n) {
   const x = Number(String(n ?? '').replace(',', '.'))
@@ -29,10 +29,10 @@ function fmt(n) {
 async function fetchProductBySlugOrId() {
   if (!slug.value) return null
   const tries = [
-    `${API}/products/all/${encodeURIComponent(slug.value)}`,
+    `${API_BASE_URL}/products/all/${encodeURIComponent(slug.value)}`,
   ]
-  if (/^\d+$/.test(slug.value)) tries.push(`${API}/products/${slug.value}`)
-  tries.push(`${API}/products/${encodeURIComponent(slug.value)}`)
+  if (/^\d+$/.test(slug.value)) tries.push(`${API_BASE_URL}/products/${slug.value}`)
+  tries.push(`${API_BASE_URL}/products/${encodeURIComponent(slug.value)}`)
 
   for (const url of tries) {
     try {
@@ -74,7 +74,7 @@ async function loadReviewsForProduct(productId) {
   if (!Number.isFinite(pid) || pid <= 0) return
 
   try {
-    const res = await fetch(`${API}/reviews`)
+    const res = await fetch(`${API_BASE_URL}/reviews`)
     if (!res.ok) return
     const all = await res.json()
 

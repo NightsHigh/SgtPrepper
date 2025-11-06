@@ -5,9 +5,9 @@ import { FaShoppingBasket } from 'vue-icons-plus/fa'
 const props = defineProps({
   isLoggedIn: { type: Boolean, default: false },
   user: { type: Object, default: null },
-  cartCount: { type: Number, default: 0 },
+  cartCount: { type: Number, default: 0 },    // ✅ added
 })
-const emit = defineEmits(['toggle-login', 'logout', 'open-cart'])
+const emit = defineEmits(['toggle-login', 'logout', 'open-cart']) // ✅ added
 
 const displayName = computed(() => {
   if (!props.user) return ''

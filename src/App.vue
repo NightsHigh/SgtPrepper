@@ -58,10 +58,9 @@ export default {
     async HandleLoginSubmit({ email, password }) {
       this.isAuthLoading = true
       this.authError = ''
-      const API_PORT = import.meta.env.VITE_API_PORT || 4000
-      const API = `http://localhost:${API_PORT}/api`
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
       try {
-        const res = await fetch(`${API}/auth/login`, {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: email, password })

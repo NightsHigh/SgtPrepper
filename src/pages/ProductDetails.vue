@@ -3,8 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { trackAddToCart } from '@/lib/analytics'
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-const API = `http://localhost:${API_PORT}/api`
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const STATIC_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
 const route = useRoute()
 const router = useRouter()
 
@@ -23,14 +23,14 @@ const triedUrl = ref('')
 const lastStatus = ref(null)
 
 function urlFor(catSlug, s) {
-  return `${API}/products/${encodeURIComponent(catSlug)}/${encodeURIComponent(s)}`
+  return `${API_BASE_URL}/products/${encodeURIComponent(catSlug)}/${encodeURIComponent(s)}`
 }
 
 function imgSrc(p) {
   const url = p?.imageUrl || ''
   if (!url) return '/placeholder.png'
   if (/^https?:\/\//i.test(url)) return url
-  return `http://localhost:${API_PORT}/${url.replace(/^\//, '')}`
+  return `${STATIC_BASE_URL}/${url.replace(/^\//, '')}`
 }
 
 async function fetchJson(u) {
@@ -50,7 +50,7 @@ async function load() {
 
   loading.value = true
   try {
-    const catsRes = await fetch(`${API}/categories`)
+    const catsRes = await fetch(`${API_BASE_URL}/categories`)
     const cats = await catsRes.json().catch(() => [])
     const slugs = Array.isArray(cats) ? cats.map((c) => c.slug).filter(Boolean) : []
 
@@ -135,7 +135,7 @@ async function loadReviewsForProduct(productId) {
   if (!Number.isFinite(pid) || pid <= 0) return
 
   try {
-    const res = await fetch(`${API}/reviews`)
+    const res = await fetch(`${API_BASE_URL}/reviews`)
     if (!res.ok) return
     const all = await res.json()
     const arr = Array.isArray(all) ? all : []

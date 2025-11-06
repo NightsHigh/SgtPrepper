@@ -11,22 +11,20 @@ const { items, isLoading, error, removeFromCart, subtotal } = useCart()
 
 const totalItems = computed(() => items.value.reduce((n, i) => n + (i.quantity || 0), 0))
 
-const API_PORT = import.meta.env.VITE_API_PORT || 4000
-
 const imgByItemId = reactive({})
 
 function imgSrc(item) {
-  if (!item) return buildImageUrl('/placeholder.png', API_PORT)
+  if (!item) return buildImageUrl('/placeholder.png')
 
   const prod = item.product || {}
 
   if (prod._resolvedImage) return prod._resolvedImage
   if (item._resolvedImage) return item._resolvedImage
 
-  const local = resolveProductImage(prod, API_PORT) || resolveProductImage(item, API_PORT)
+  const local = resolveProductImage(prod) || resolveProductImage(item)
   if (local) return local
 
-  return buildImageUrl('/placeholder.png', API_PORT)
+  return buildImageUrl('/placeholder.png')
 }
 
 async function hydrateImage(item) {
@@ -43,7 +41,7 @@ async function hydrateImage(item) {
     return
   }
 
-  const local = resolveProductImage(item, API_PORT)
+  const local = resolveProductImage(item)
   if (local) {
     imgByItemId[item.id] = local
     item._resolvedImage = local
@@ -55,7 +53,7 @@ async function hydrateImage(item) {
     const full = await getProduct({ id, slug, categorySlug })
     if (full) {
       item.product = { ...(item.product || {}), ...full }
-      const url = resolveProductImage(item, API_PORT)
+      const url = resolveProductImage(item)
       if (url) {
         imgByItemId[item.id] = url
         item.product._resolvedImage = url

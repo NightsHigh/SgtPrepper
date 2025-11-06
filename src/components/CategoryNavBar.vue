@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { useFetch } from '@/composables/useFetch'
 
 const emit = defineEmits(['select-category'])
-const { data, loading, error } = useFetch('http://localhost:4000/api/categories', { initial: [] })
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const { data, loading, error } = useFetch(`${API_BASE_URL}/categories`, { initial: [] })
 
 const categories = computed(() => Array.isArray(data.value) ? data.value : [])
 
