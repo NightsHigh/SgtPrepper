@@ -1,4 +1,3 @@
-// src/composables/useFetch.js
 import { ref, onMounted } from 'vue'
 
 export function useFetch(url, { initial = null, immediate = true, options = {} } = {}) {

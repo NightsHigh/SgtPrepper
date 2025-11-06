@@ -27,7 +27,6 @@ function onEsc(e) {
 }
 watch(() => props.open, (v) => {
   if (v) {
-    // reset error state only; keep typed values
   }
 })
 onMounted(() => window.addEventListener('keydown', onEsc))

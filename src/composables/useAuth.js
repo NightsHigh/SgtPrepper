@@ -1,4 +1,3 @@
-// src/stores/auth.js
 import { reactive } from 'vue'
 
 const state = reactive({

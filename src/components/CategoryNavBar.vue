@@ -8,7 +8,7 @@ const { data, loading, error } = useFetch('http://localhost:4000/api/categories'
 const categories = computed(() => Array.isArray(data.value) ? data.value : [])
 
 function selectCategory(slug) {
-  emit('select-category', slug) // router depends on slug
+  emit('select-category', slug)
 }
 </script>
 

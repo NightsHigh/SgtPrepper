@@ -1,4 +1,3 @@
-// src/lib/apiFetch.js
 const API_BASE = 'http://localhost:4000/api'
 
 export async function apiFetch(input, init = {}) {
@@ -11,11 +10,9 @@ export async function apiFetch(input, init = {}) {
     return fetch(url, { ...init, headers })
   }
 
-  // First attempt with current token (if any)
   let res = await withAuth()
   if (res.status !== 401) return res
 
-  // Try 1x refresh
   const refreshToken = localStorage.getItem('refreshToken')
   if (!refreshToken) return res
 
@@ -32,7 +29,6 @@ export async function apiFetch(input, init = {}) {
 
   localStorage.setItem('accessToken', accessToken)
 
-  // Retry original request with new token
   res = await withAuth()
   return res
 }

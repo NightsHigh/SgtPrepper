@@ -4,12 +4,13 @@ import Footer from '@/components/Footer.vue'
 import CategoryNavBar from '@/components/CategoryNavBar.vue'
 import ProductList from '@/components/ProductList.vue'
 import SignInModal from '@/components/SignInModal.vue'
-import CartDrawer from '@/components/CartDrawer.vue'              // ✅ new
+import CartDrawer from '@/components/CartDrawer.vue'
+import CookieBanner from '@/components/CookieBanner.vue'
 import { useCart } from '@/composables/useCart'
-import { useAuth } from '@/composables/useAuth'                           // ✅ new
+import { useAuth } from '@/composables/useAuth'
 
 export default {
-  components: { Header, Footer, CategoryNavBar, ProductList, SignInModal, CartDrawer },
+  components: { Header, Footer, CategoryNavBar, ProductList, SignInModal, CartDrawer, CookieBanner },
   setup() {
     const cart = useCart()
     const { state, setAuth, logout } = useAuth()
@@ -33,7 +34,6 @@ export default {
     }
   },
   mounted() {
-    // bootstrap auth from localStorage
     this.IsLoggedIn = !!this.authState.accessToken
     this.user = this.authState.user
     if (this.IsLoggedIn) this.cart.fetchCart()
@@ -89,7 +89,7 @@ export default {
 </script>
 
 <template>
-  <div>
+  <div class="min-h-screen flex flex-col bg-slate-50">
     <Header
       :isLoggedIn="IsLoggedIn"
       :user="user"
@@ -100,12 +100,14 @@ export default {
 
     <CategoryNavBar @select-category="OnSelectCategory" />
 
-    <router-view
-      :selectedCategoryId="SelectedCategoryId"
-      :isLoggedIn="IsLoggedIn"
-      :addToCart="AddToCart"
-      :openLogin="OpenSignIn"
-    />
+    <main class="flex-1">
+      <router-view
+        :selectedCategoryId="SelectedCategoryId"
+        :isLoggedIn="IsLoggedIn"
+        :addToCart="AddToCart"
+        :openLogin="OpenSignIn"
+      />
+    </main>
 
     <Footer />
 
@@ -117,6 +119,10 @@ export default {
       @submit="HandleLoginSubmit"
     />
 
-    <CartDrawer :open="ShowCart" @close="ShowCart = false" @checkout="() => {}" />
-  </div>
-</template>
+    <CartDrawer
+      :open="ShowCart"
+      @close="ShowCart = false"
+      @checkout="$router?.push?.({ name: 'checkout' })"
+    />
+    <CookieBanner />
+  </div></template>
